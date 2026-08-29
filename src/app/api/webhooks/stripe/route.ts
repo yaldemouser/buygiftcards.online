@@ -38,6 +38,9 @@ async function fulfillOrder(session: Stripe.Checkout.Session) {
   if (!cartRaw || !session.customer_details?.email) return;
   const cart = JSON.parse(cartRaw) as Array<{ s: string; a: number; q: number; d: "egift" | "physical" }>;
 
+  const address = session.customer_details.address;
+  const taxCents = session.total_details?.amount_tax;
+
   const order = await prisma.order.create({
     data: {
       orderNumber: generateOrderNumber(),
@@ -45,10 +48,17 @@ async function fulfillOrder(session: Stripe.Checkout.Session) {
       status: "PAID",
       subtotalCents: session.amount_subtotal ?? 0,
       totalCents: session.amount_total ?? 0,
+      taxCents: taxCents ?? undefined,
       currency: session.currency ?? "usd",
       stripeCheckoutSessionId: session.id,
       stripePaymentIntentId:
         typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id,
+      billingLine1: address?.line1 ?? undefined,
+      billingLine2: address?.line2 ?? undefined,
+      billingCity: address?.city ?? undefined,
+      billingState: address?.state ?? undefined,
+      billingPostalCode: address?.postal_code ?? undefined,
+      billingCountry: address?.country ?? undefined,
     },
   });
 

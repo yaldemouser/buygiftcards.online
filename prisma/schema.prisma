@@ -27,9 +27,19 @@ model Order {
   status                OrderStatus @default(PENDING)
   subtotalCents         Int
   totalCents             Int
+  taxCents               Int?
   currency              String      @default("usd")
   stripeCheckoutSessionId String    @unique
   stripePaymentIntentId  String?
+  // Billing address Stripe collected at checkout (also what Stripe Tax used
+  // to calculate tax jurisdiction) — captured from the webhook's
+  // customer_details.address so we keep a record of it, not just Stripe.
+  billingLine1          String?
+  billingLine2          String?
+  billingCity            String?
+  billingState           String?
+  billingPostalCode      String?
+  billingCountry          String?
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
   items                 OrderItem[]

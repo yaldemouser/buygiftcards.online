@@ -15,9 +15,17 @@ const STATUS_STYLE: Record<string, string> = {
 
 type Order = {
   orderNumber: string;
+  subtotalCents: number;
   totalCents: number;
+  taxCents: number | null;
   status: string;
   createdAt: string;
+  billingLine1: string | null;
+  billingLine2: string | null;
+  billingCity: string | null;
+  billingState: string | null;
+  billingPostalCode: string | null;
+  billingCountry: string | null;
   items: {
     id: string;
     brandName: string;
@@ -143,9 +151,34 @@ export function OrderDetail({ orderNumber, email }: { orderNumber: string; email
         </div>
       ))}
 
-      <div className="bg-white border border-ink-100 rounded-2xl p-6 flex justify-between font-extrabold text-lg">
-        <span>Total Paid</span>
-        <span>{fmt(order.totalCents)}</span>
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="bg-white border border-ink-100 rounded-2xl p-6">
+          <div className="flex justify-between text-sm text-ink-500 mb-1.5">
+            <span>Subtotal</span>
+            <span>{fmt(order.subtotalCents)}</span>
+          </div>
+          {!!order.taxCents && (
+            <div className="flex justify-between text-sm text-ink-500 mb-1.5">
+              <span>Tax</span>
+              <span>{fmt(order.taxCents)}</span>
+            </div>
+          )}
+          <div className="flex justify-between font-extrabold text-lg pt-2 mt-2 border-t border-ink-100">
+            <span>Total Paid</span>
+            <span>{fmt(order.totalCents)}</span>
+          </div>
+        </div>
+        {(order.billingLine1 || order.billingCity) && (
+          <div className="bg-white border border-ink-100 rounded-2xl p-6">
+            <div className="text-xs font-bold text-ink-400 uppercase tracking-wide mb-2">Billing Address</div>
+            <div className="text-sm text-ink-700 leading-relaxed">
+              {order.billingLine1 && <div>{order.billingLine1}</div>}
+              {order.billingLine2 && <div>{order.billingLine2}</div>}
+              <div>{[order.billingCity, order.billingState, order.billingPostalCode].filter(Boolean).join(", ")}</div>
+              {order.billingCountry && <div>{order.billingCountry}</div>}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
