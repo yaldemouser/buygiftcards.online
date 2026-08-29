@@ -31,6 +31,16 @@ stripe listen --forward-to localhost:3000/api/webhooks/stripe
 
 Copy the `whsec_...` it prints into `STRIPE_WEBHOOK_SECRET`.
 
+## Deploying to Vercel
+
+`vercel.json` is checked in with sensible defaults (explicit Next.js framework detection, and baseline security headers — `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, a locked-down `Permissions-Policy`, and `no-store` caching on the webhook route). The `build` script runs `prisma generate` before `next build` so the Prisma client is always regenerated on deploy, even on a cached `node_modules` where Vercel might otherwise skip `postinstall`.
+
+1. [vercel.com/new](https://vercel.com/new) → import this repo. Framework and build command are auto-detected from `vercel.json`.
+2. Add the env vars from `.env.example` in Project Settings → Environment Variables. For `DATABASE_URL`, either provision Vercel Postgres (Storage tab, one click) or point at Neon/Supabase — not the local Docker URL from `.env.local`.
+3. After the first deploy, run the migration once against the production database: `DATABASE_URL="<prod-url>" npm run db:deploy`.
+4. Add a Stripe webhook endpoint at `https://<your-domain>/api/webhooks/stripe` for `checkout.session.completed`, and put its signing secret in `STRIPE_WEBHOOK_SECRET`.
+5. Add your custom domain under Project Settings → Domains, then set the DNS records Vercel gives you at your registrar. Set `NEXT_PUBLIC_SITE_URL` to match.
+
 ## Architecture
 
 - `src/lib/brands.ts` — server-side product catalog (name, price range, denominations). Checkout re-validates every cart line against this list, so a tampered client request can never set its own price.
