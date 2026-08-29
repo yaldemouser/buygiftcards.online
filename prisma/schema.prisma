@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FULFILLED
+  FAILED
+  REFUNDED
+}
+
+enum DeliveryType {
+  EGIFT
+  PHYSICAL
+}
+
+model Order {
+  id                    String      @id @default(cuid())
+  orderNumber           String      @unique
+  customerEmail         String
+  status                OrderStatus @default(PENDING)
+  subtotalCents         Int
+  totalCents             Int
+  currency              String      @default("usd")
+  stripeCheckoutSessionId String    @unique
+  stripePaymentIntentId  String?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  items                 OrderItem[]
+
+  @@index([customerEmail])
+}
+
+model OrderItem {
+  id            String       @id @default(cuid())
+  order         Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId       String
+  brandSlug     String
+  brandName     String
+  denomCents    Int
+  quantity      Int
+  deliveryType  DeliveryType
+  codes         GiftCardCode[]
+}
+
+model GiftCardCode {
+  id          String    @id @default(cuid())
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  orderItemId String
+  code        String
+  pin         String
+  isDemo      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+}
+
+enum BusinessRequestStatus {
+  DRAFTED   // Stripe draft invoice created, not yet sent — pending internal review
+  SENT      // A human reviewed it and finalized/sent the Stripe invoice
+  DECLINED
+}
+
+// Corporate/bulk order requests (Stripe Invoicing product). Deliberately
+// creates a DRAFT invoice only — a person reviews and sends it from the
+// Stripe Dashboard, rather than auto-emailing a real invoice to a business
+// customer straight off a web form.
+model BusinessInvoiceRequest {
+  id               String                @id @default(cuid())
+  companyName      String
+  contactName      String
+  email            String
+  phone            String?
+  notes            String?
+  totalCents       Int
+  stripeCustomerId String
+  stripeInvoiceId  String                @unique
+  status           BusinessRequestStatus @default(DRAFTED)
+  createdAt        DateTime              @default(now())
+  items            BusinessInvoiceItem[]
+}
+
+model BusinessInvoiceItem {
+  id          String                  @id @default(cuid())
+  request     BusinessInvoiceRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  requestId   String
+  brandSlug   String
+  brandName   String
+  denomCents  Int
+  quantity    Int
+}
