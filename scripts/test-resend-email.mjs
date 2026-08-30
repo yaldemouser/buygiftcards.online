@@ -29,7 +29,7 @@ const resend = new Resend(apiKey);
 
 const result = await resend.emails.send({
   from: "onboarding@resend.dev",
-  to: "ptlhumanresource@gmail.com",
+  to: "support@buygiftcards.online",
   subject: "Hello World",
   html: "<p>Congrats on sending your <strong>first email</strong>!</p>",
 });
