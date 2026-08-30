@@ -13,7 +13,9 @@ export function Footer() {
       <div className="max-w-7xl mx-auto px-6 py-14 grid grid-cols-2 md:grid-cols-4 gap-10">
         <div className="col-span-2 md:col-span-1">
           <div className="flex items-center gap-2 mb-4">
-            <Image src="/logo-mark.svg" alt="" width={30} height={30} />
+            <div className="bg-white rounded-lg p-1">
+              <Image src="/logo-mark-512.png" alt="" width={28} height={28} unoptimized className="rounded" />
+            </div>
             <span className="text-white font-extrabold">buygiftcards.online</span>
           </div>
           <p className="text-sm leading-relaxed max-w-xs">

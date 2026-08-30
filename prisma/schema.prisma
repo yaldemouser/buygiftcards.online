@@ -94,6 +94,16 @@ model BusinessInvoiceRequest {
   items            BusinessInvoiceItem[]
 }
 
+// Kept in our own DB regardless of whether the Kit.com (ConvertKit) API call
+// succeeds — so a signup is never lost just because that integration is
+// unconfigured or briefly down. See src/lib/newsletter.ts.
+model NewsletterSubscriber {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  subscribedAt  DateTime @default(now())
+  syncedToKit   Boolean  @default(false)
+}
+
 model BusinessInvoiceItem {
   id          String                  @id @default(cuid())
   request     BusinessInvoiceRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)

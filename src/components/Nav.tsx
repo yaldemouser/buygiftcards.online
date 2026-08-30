@@ -63,7 +63,7 @@ export function Nav() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center h-16 gap-3 sm:gap-6">
           <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-            <Image src="/logo-mark.svg" alt="" width={32} height={32} className="rounded-[9px]" />
+            <Image src="/logo-mark-512.png" alt="" width={36} height={36} priority className="rounded-[9px]" />
             <span className="hidden sm:inline text-lg font-extrabold tracking-tight text-ink-900">
               buygiftcards<span className="text-brand-600">.online</span>
             </span>

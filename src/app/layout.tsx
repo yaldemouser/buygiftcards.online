@@ -6,6 +6,7 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { CartDrawer } from "@/components/CartDrawer";
 import { DemoBanner } from "@/components/DemoBanner";
+import { NewsletterModal } from "@/components/NewsletterModal";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
@@ -16,12 +17,19 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: { default: "buygiftcards.online — Digital Gift Cards", template: "%s — buygiftcards.online" },
   description: "Browse and buy digital gift cards from popular brands, checked out securely with Stripe. Instant email delivery.",
-  icons: { icon: "/favicon.svg", apple: "/favicon.svg" },
+  icons: {
+    icon: [
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
   openGraph: {
     title: "buygiftcards.online — Digital Gift Cards",
     description: "Browse and buy digital gift cards from popular brands, checked out securely with Stripe.",
     siteName: "buygiftcards.online",
     type: "website",
+    images: ["/logo-full.png"],
   },
   twitter: { card: "summary" },
 };
@@ -36,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
           <Footer />
           <CartDrawer />
+          <NewsletterModal />
         </CartProvider>
       </body>
     </html>

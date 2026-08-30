@@ -35,6 +35,9 @@ export async function sendOrderConfirmationEmail(order: FullOrder) {
 
   const html = `
     <div style="font-family:sans-serif;max-width:520px;margin:0 auto;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <img src="${siteUrl}/logo-full.png" alt="buygiftcards.online" width="220" style="max-width:220px;height:auto;" />
+      </div>
       <h2 style="color:#0f8c66;">Order confirmed — ${order.orderNumber}</h2>
       ${hasDemoCodes ? `<p style="background:#fff3cd;padding:12px;border-radius:8px;color:#7a5b00;font-size:13px;">Demo mode: the codes on this order are randomly generated placeholders, not real redeemable gift cards.</p>` : ""}
       <table style="width:100%;border-collapse:collapse;">${itemsHtml}</table>
