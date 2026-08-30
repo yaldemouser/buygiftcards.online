@@ -15,11 +15,14 @@ const STATUS_STYLE: Record<string, string> = {
 
 type Order = {
   orderNumber: string;
+  customerEmail: string;
   subtotalCents: number;
   totalCents: number;
   taxCents: number | null;
   status: string;
   createdAt: string;
+  emailSentAt: string | null;
+  emailError: string | null;
   billingLine1: string | null;
   billingLine2: string | null;
   billingCity: string | null;
@@ -99,15 +102,21 @@ export function OrderDetail({ orderNumber, email }: { orderNumber: string; email
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-10">
-      <div className="flex justify-between items-start mb-7">
+      <div className="flex justify-between items-start mb-3">
         <div>
           <h1 className="text-2xl font-extrabold mb-1">Order {order.orderNumber}</h1>
           <div className="text-sm text-ink-400">{new Date(order.createdAt).toLocaleString()}</div>
+          <div className="flex items-center gap-1.5 text-sm text-ink-600 mt-1.5">
+            <Icon name="mail" size={14} className="text-ink-400" />
+            {order.customerEmail}
+          </div>
         </div>
         <span className={`text-xs font-bold px-4 py-1.5 rounded-full ${STATUS_STYLE[order.status] || "bg-ink-100 text-ink-600"}`}>
           {order.status}
         </span>
       </div>
+
+      <OrderStatusTimeline order={order} />
 
       {order.items.map((item) => (
         <div key={item.id} className="bg-white border border-ink-100 rounded-2xl p-6 mb-4">
@@ -180,6 +189,66 @@ export function OrderDetail({ orderNumber, email }: { orderNumber: string; email
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+type StepState = "done" | "failed" | "pending";
+
+function StatusStep({ state, label, detail }: { state: StepState; label: string; detail?: string }) {
+  const iconByState: Record<StepState, { name: "checkCircle" | "x" | "loader"; className: string; bg: string }> = {
+    done: { name: "checkCircle", className: "text-green-600", bg: "bg-green-50" },
+    failed: { name: "x", className: "text-red-600", bg: "bg-red-50" },
+    pending: { name: "loader", className: "text-ink-400", bg: "bg-ink-100" },
+  };
+  const { name, className, bg } = iconByState[state];
+  return (
+    <div className="flex items-start gap-3">
+      <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${bg}`}>
+        <Icon name={name} size={14} className={className} />
+      </div>
+      <div className="min-w-0">
+        <div className={`text-sm font-bold ${state === "failed" ? "text-red-700" : "text-ink-900"}`}>{label}</div>
+        {detail && <div className="text-xs text-ink-500 mt-0.5 break-words">{detail}</div>}
+      </div>
+    </div>
+  );
+}
+
+// The visible order `status` (PENDING/PAID/FULFILLED/FAILED/REFUNDED) only
+// tells you the payment/fulfillment state — it says nothing about whether
+// the confirmation email actually reached the customer, which is tracked
+// separately (emailSentAt/emailError) since Resend can silently reject a
+// send without the order itself failing. This lays both out explicitly
+// rather than collapsing them into one badge.
+function OrderStatusTimeline({ order }: { order: Order }) {
+  const paymentOk = order.status !== "PENDING" && order.status !== "FAILED";
+  const fulfilled = order.status === "FULFILLED" || order.status === "REFUNDED";
+
+  return (
+    <div className="bg-white border border-ink-100 rounded-2xl p-6 mb-4 grid sm:grid-cols-4 gap-5">
+      <StatusStep state="done" label="Order Placed" detail={new Date(order.createdAt).toLocaleString()} />
+      <StatusStep
+        state={order.status === "FAILED" ? "failed" : paymentOk ? "done" : "pending"}
+        label="Payment"
+        detail={order.status === "FAILED" ? "Payment failed" : paymentOk ? "Charged successfully" : "Awaiting payment"}
+      />
+      <StatusStep
+        state={fulfilled ? "done" : "pending"}
+        label="Gift Cards Issued"
+        detail={fulfilled ? `${order.items.reduce((s, i) => s + i.quantity, 0)} code(s) generated` : "Not yet issued"}
+      />
+      <StatusStep
+        state={order.emailSentAt ? "done" : order.emailError ? "failed" : "pending"}
+        label="Confirmation Email"
+        detail={
+          order.emailSentAt
+            ? `Sent ${new Date(order.emailSentAt).toLocaleString()}`
+            : order.emailError
+              ? `Failed: ${order.emailError}`
+              : "Not sent yet"
+        }
+      />
     </div>
   );
 }

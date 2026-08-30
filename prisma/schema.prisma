@@ -40,6 +40,13 @@ model Order {
   billingState           String?
   billingPostalCode      String?
   billingCountry          String?
+  // Tracks the confirmation email specifically, separate from `status`
+  // (which is about payment/fulfillment). A NULL emailSentAt with a
+  // populated emailError means Resend rejected or failed the send — the
+  // order is still fully fulfilled (codes exist), just not yet confirmed
+  // by email.
+  emailSentAt            DateTime?
+  emailError             String?
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
   items                 OrderItem[]

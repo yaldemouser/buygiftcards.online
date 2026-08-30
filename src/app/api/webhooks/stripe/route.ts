@@ -86,6 +86,25 @@ async function fulfillOrder(session: Stripe.Checkout.Session) {
 
   await prisma.order.update({ where: { id: order.id }, data: { status: "FULFILLED" } });
 
+  // Fulfillment (payment recorded, codes issued) is already done and
+  // committed at this point regardless of what happens next — a failed
+  // confirmation email should never undo that or make the webhook return an
+  // error (which would just make Stripe retry and re-run all of the above
+  // against an already-fulfilled order). It's tracked separately below.
   const full = await prisma.order.findUnique({ where: { id: order.id }, include: { items: { include: { codes: true } } } });
-  if (full) await sendOrderConfirmationEmail(full);
+  if (full) {
+    try {
+      const result = await sendOrderConfirmationEmail(full);
+      await prisma.order.update({
+        where: { id: order.id },
+        data: result.sent ? { emailSentAt: new Date(), emailError: null } : { emailError: result.error },
+      });
+    } catch (err) {
+      console.error(`[webhook] Unexpected error sending confirmation for order ${order.orderNumber}:`, err);
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { emailError: err instanceof Error ? err.message : String(err) },
+      });
+    }
+  }
 }

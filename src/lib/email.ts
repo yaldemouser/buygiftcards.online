@@ -5,11 +5,13 @@ type FullOrder = Order & { items: (OrderItem & { codes: GiftCardCode[] })[] };
 
 const fmt = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
-export async function sendOrderConfirmationEmail(order: FullOrder) {
+export type EmailResult = { sent: boolean; error?: string };
+
+export async function sendOrderConfirmationEmail(order: FullOrder): Promise<EmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.warn(`[email] RESEND_API_KEY not set — skipping email for order ${order.orderNumber}`);
-    return;
+    return { sent: false, error: "RESEND_API_KEY not configured" };
   }
 
   const resend = new Resend(apiKey);
@@ -51,10 +53,28 @@ export async function sendOrderConfirmationEmail(order: FullOrder) {
     </div>
   `;
 
-  await resend.emails.send({
-    from: process.env.EMAIL_FROM || "orders@buygiftcards.online",
-    to: order.customerEmail,
-    subject: `Your buygiftcards.online order ${order.orderNumber}`,
-    html,
-  });
+  try {
+    // resend.emails.send() does NOT throw on API-level rejection (bad
+    // recipient, unverified domain, etc.) — it returns { data, error }. We
+    // were never checking .error, so a silently-rejected send still looked
+    // like a success. Check both this and thrown exceptions (network
+    // failures, invalid API key) so the order record reflects reality.
+    const { data, error } = await resend.emails.send({
+      from: process.env.EMAIL_FROM || "orders@buygiftcards.online",
+      to: order.customerEmail,
+      subject: `Your buygiftcards.online order ${order.orderNumber}`,
+      html,
+    });
+
+    if (error) {
+      console.error(`[email] Resend rejected order ${order.orderNumber}:`, error);
+      return { sent: false, error: error.message || JSON.stringify(error) };
+    }
+    console.log(`[email] Sent order ${order.orderNumber} confirmation, Resend id ${data?.id}`);
+    return { sent: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[email] Failed to send order ${order.orderNumber} confirmation:`, err);
+    return { sent: false, error: message };
+  }
 }
