@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { Brand } from "@/lib/brands";
 import { BrandLogo } from "./BrandLogo";
@@ -8,6 +8,8 @@ import { useCart } from "@/context/CartContext";
 import { Icon } from "./Icon";
 
 const fmt = (n: number) => `$${n.toFixed(2)}`;
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
+const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export function ProductDetail({ brand: b }: { brand: Brand }) {
   const { add } = useCart();
@@ -18,8 +20,56 @@ export function ProductDetail({ brand: b }: { brand: Brand }) {
   const [deliveryType, setDeliveryType] = useState<"egift" | "physical">(b.type === "physical" ? "physical" : "egift");
   const [added, setAdded] = useState(false);
 
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const amt = isCustom ? Number(custom) || 0 : amount;
-  const valid = amt >= b.min && amt <= b.max;
+  const valid = amt >= b.min && amt <= b.max && !photoUploading;
+
+  const onPhotoSelected = async (file: File | undefined) => {
+    if (!file) return;
+    setPhotoError(null);
+
+    if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
+      setPhotoError("Please upload a JPEG, PNG, or WEBP image.");
+      return;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      setPhotoError("Image must be under 8MB.");
+      return;
+    }
+
+    const localPreview = URL.createObjectURL(file);
+    setPhotoPreview(localPreview);
+    setPhotoUrl(null);
+    setPhotoUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload-photo", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+      setPhotoUrl(data.url);
+    } catch (err) {
+      setPhotoError(err instanceof Error ? err.message : "Upload failed — try again.");
+      setPhotoPreview(null);
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
+  const removePhoto = () => {
+    setPhotoPreview(null);
+    setPhotoUrl(null);
+    setPhotoError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const cardImage = photoPreview;
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
@@ -37,13 +87,23 @@ export function ProductDetail({ brand: b }: { brand: Brand }) {
       >
         <div
           className="w-80 h-48 rounded-2xl flex items-center justify-center relative overflow-hidden shadow-2xl"
-          style={{ background: `linear-gradient(140deg, ${b.color}ee, ${b.color}bb)` }}
+          style={{ background: cardImage ? "#000" : `linear-gradient(140deg, ${b.color}ee, ${b.color}bb)` }}
         >
-          <BrandLogo domain={b.domain} name={b.name} size={80} radius={16} bg="rgba(255,255,255,0.95)" />
-          <div className="absolute top-4 left-5 text-[11px] font-bold text-white/60">
+          {cardImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={cardImage} alt="Your uploaded photo" className="absolute inset-0 w-full h-full object-cover" />
+          ) : null}
+          {cardImage && <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-black/30" />}
+          {!cardImage && <BrandLogo domain={b.domain} name={b.name} size={80} radius={16} bg="rgba(255,255,255,0.95)" />}
+          {cardImage && (
+            <div className="absolute top-4 right-5">
+              <BrandLogo domain={b.domain} name={b.name} size={36} radius={8} bg="rgba(255,255,255,0.95)" />
+            </div>
+          )}
+          <div className="absolute top-4 left-5 text-[11px] font-bold text-white/80">
             {deliveryType === "egift" ? "eGIFT CARD" : "GIFT CARD"}
           </div>
-          {amt > 0 && <div className="absolute bottom-4 left-5 text-2xl font-extrabold text-white">{fmt(amt)}</div>}
+          {amt > 0 && <div className="absolute bottom-4 left-5 text-2xl font-extrabold text-white drop-shadow">{fmt(amt)}</div>}
         </div>
       </div>
 
@@ -71,6 +131,51 @@ export function ProductDetail({ brand: b }: { brand: Brand }) {
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {b.supportsCustomPhoto && (
+          <div className="mb-7">
+            <div className="text-sm font-bold mb-2.5">Personalize with a Photo (optional)</div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => onPhotoSelected(e.target.files?.[0])}
+            />
+            {!photoPreview ? (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full py-6 border-2 border-dashed border-ink-200 rounded-xl text-sm font-semibold text-ink-500 hover:border-brand-400 hover:text-brand-600 transition flex flex-col items-center gap-2"
+              >
+                <Icon name="package" size={22} />
+                Click to upload a photo for the card face
+              </button>
+            ) : (
+              <div className="flex items-center gap-3 bg-ink-50 border-2 border-ink-100 rounded-xl p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={photoPreview} alt="" className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
+                <div className="flex-1 min-w-0 text-sm">
+                  {photoUploading ? (
+                    <span className="flex items-center gap-1.5 text-ink-500">
+                      <Icon name="loader" size={14} className="animate-spin" /> Uploading…
+                    </span>
+                  ) : photoUrl ? (
+                    <span className="flex items-center gap-1.5 text-green-700 font-semibold">
+                      <Icon name="checkCircle" size={14} /> Photo ready
+                    </span>
+                  ) : (
+                    <span className="text-red-600">Upload failed</span>
+                  )}
+                </div>
+                <button onClick={removePhoto} className="text-ink-400 hover:text-red-500 transition flex-shrink-0">
+                  <Icon name="x" size={18} />
+                </button>
+              </div>
+            )}
+            {photoError && <div className="text-red-600 text-xs mt-2">{photoError}</div>}
+            <p className="text-xs text-ink-400 mt-2">JPEG, PNG, or WEBP, up to 8MB. Shown on the card design above — this doesn't change how the card is redeemed.</p>
           </div>
         )}
 
@@ -130,7 +235,16 @@ export function ProductDetail({ brand: b }: { brand: Brand }) {
           <button
             disabled={!valid}
             onClick={() => {
-              add({ brandSlug: b.slug, brandName: b.name, domain: b.domain, color: b.color, amount: amt, qty, deliveryType });
+              add({
+                brandSlug: b.slug,
+                brandName: b.name,
+                domain: b.domain,
+                color: b.color,
+                amount: amt,
+                qty,
+                deliveryType,
+                customPhotoUrl: photoUrl ?? undefined,
+              });
               setAdded(true);
               setTimeout(() => setAdded(false), 2000);
             }}
@@ -140,6 +254,8 @@ export function ProductDetail({ brand: b }: { brand: Brand }) {
           >
             {added ? (
               <span className="flex items-center justify-center gap-2"><Icon name="checkCircle" size={18} />Added to Cart</span>
+            ) : photoUploading ? (
+              "Uploading photo…"
             ) : (
               "Add to Cart"
             )}

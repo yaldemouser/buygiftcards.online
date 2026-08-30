@@ -37,6 +37,7 @@ export function CartDrawer() {
             amount: i.amount,
             qty: i.qty,
             deliveryType: i.deliveryType,
+            customPhotoUrl: i.customPhotoUrl,
           })),
         }),
       });
@@ -76,10 +77,18 @@ export function CartDrawer() {
           ) : (
             items.map((item) => (
               <div key={item.key} className="flex gap-4 py-4 border-b border-ink-50 items-center">
-                <BrandLogo domain={item.domain} name={item.brandName} size={48} radius={10} />
+                {item.customPhotoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.customPhotoUrl} alt="" className="w-12 h-12 rounded-[10px] object-cover flex-shrink-0" />
+                ) : (
+                  <BrandLogo domain={item.domain} name={item.brandName} size={48} radius={10} />
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-sm">{item.brandName}</div>
-                  <div className="text-xs text-ink-400">{fmt(item.amount)} · {item.deliveryType === "egift" ? "eGift" : "Physical"}</div>
+                  <div className="text-xs text-ink-400">
+                    {fmt(item.amount)} · {item.deliveryType === "egift" ? "eGift" : "Physical"}
+                    {item.customPhotoUrl && " · Custom photo"}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2.5">
                   <div className="flex border border-ink-100 rounded-lg overflow-hidden">

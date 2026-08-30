@@ -63,6 +63,10 @@ model OrderItem {
   denomCents    Int
   quantity      Int
   deliveryType  DeliveryType
+  // Vercel Blob URL for a customer-uploaded photo (currently Visa only —
+  // Brand.supportsCustomPhoto). Purely cosmetic, shown on the order page
+  // and confirmation email; never sent to the card issuer.
+  customPhotoUrl String?
   codes         GiftCardCode[]
 }
 

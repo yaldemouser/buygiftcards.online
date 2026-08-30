@@ -22,7 +22,10 @@ export async function sendOrderConfirmationEmail(order: FullOrder): Promise<Emai
   const itemsHtml = order.items
     .map(
       (item) => `<tr>
-        <td style="padding:8px 0;">${item.brandName} × ${item.quantity}</td>
+        <td style="padding:8px 0;">
+          ${item.customPhotoUrl ? `<img src="${item.customPhotoUrl}" width="32" height="32" style="width:32px;height:32px;border-radius:6px;object-fit:cover;vertical-align:middle;margin-right:8px;" alt="" />` : ""}
+          ${item.brandName} × ${item.quantity}
+        </td>
         <td style="padding:8px 0;text-align:right;">${fmt(item.denomCents * item.quantity)}</td>
       </tr>`
     )

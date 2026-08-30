@@ -35,6 +35,7 @@ type Order = {
     denomCents: number;
     quantity: number;
     deliveryType: string;
+    customPhotoUrl: string | null;
     codes: { id: string; code: string; pin: string; isDemo: boolean }[];
   }[];
 };
@@ -120,9 +121,15 @@ export function OrderDetail({ orderNumber, email }: { orderNumber: string; email
 
       {order.items.map((item) => (
         <div key={item.id} className="bg-white border border-ink-100 rounded-2xl p-6 mb-4">
-          <div className="flex justify-between items-center mb-4">
-            <span className="font-extrabold">{item.brandName}</span>
-            <span className="text-sm text-ink-600">
+          <div className="flex justify-between items-center mb-4 gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              {item.customPhotoUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={item.customPhotoUrl} alt="Your card photo" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+              )}
+              <span className="font-extrabold truncate">{item.brandName}</span>
+            </div>
+            <span className="text-sm text-ink-600 flex-shrink-0">
               {fmt(item.denomCents)} × {item.quantity} · {item.deliveryType === "EGIFT" ? "eGift" : "Physical"}
             </span>
           </div>

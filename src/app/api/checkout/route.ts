@@ -8,6 +8,7 @@ const CartItemSchema = z.object({
   amount: z.number().positive(),
   qty: z.number().int().min(1).max(10),
   deliveryType: z.enum(["egift", "physical"]),
+  customPhotoUrl: z.string().url().optional(),
 });
 const BodySchema = z.object({
   items: z.array(CartItemSchema).min(1).max(20),
@@ -33,6 +34,9 @@ export async function POST(req: NextRequest) {
       };
       quantity: number;
     }> = [];
+    // Parallel array (by index) of validated photo URLs per cart line, used
+    // below to build the metadata Stripe sends back on the webhook.
+    const photoByLine: (string | undefined)[] = [];
 
     // Every line item is re-priced from the server-side catalog. The client
     // cart is a convenience UI — it is never trusted for what gets charged.
@@ -46,17 +50,33 @@ export async function POST(req: NextRequest) {
       if (!isValidDenomination(brand, amountCents)) {
         return NextResponse.json({ error: `Invalid amount for ${brand.name}` }, { status: 400 });
       }
+      // Only trust a custom photo for brands that actually support it, and
+      // only if it's really hosted on our own Blob storage — never pass an
+      // arbitrary client-supplied URL through to Stripe/our DB unchecked.
+      let customPhotoUrl: string | undefined;
+      if (item.customPhotoUrl) {
+        if (!brand.supportsCustomPhoto) {
+          return NextResponse.json({ error: `${brand.name} does not support custom photos` }, { status: 400 });
+        }
+        if (!/^https:\/\/[a-z0-9-]+\.public\.blob\.vercel-storage\.com\//.test(item.customPhotoUrl)) {
+          return NextResponse.json({ error: "Invalid photo URL" }, { status: 400 });
+        }
+        customPhotoUrl = item.customPhotoUrl;
+      }
+
       line_items.push({
         price_data: {
           currency: "usd",
           product_data: {
             name: `${brand.name} ${item.deliveryType === "egift" ? "eGift" : "Physical"} Card — $${item.amount}`,
+            images: customPhotoUrl ? [customPhotoUrl] : undefined,
             metadata: { brandSlug: brand.slug, amount: String(item.amount), deliveryType: item.deliveryType },
           },
           unit_amount: amountCents,
         },
         quantity: item.qty,
       });
+      photoByLine.push(customPhotoUrl);
     }
 
     const session = await stripe.checkout.sessions.create(
@@ -78,7 +98,13 @@ export async function POST(req: NextRequest) {
         billing_address_collection: "required",
         metadata: {
           cart: JSON.stringify(
-            parsed.data.items.map((i) => ({ s: i.brandSlug, a: i.amount, q: i.qty, d: i.deliveryType }))
+            parsed.data.items.map((i, idx) => ({
+              s: i.brandSlug,
+              a: i.amount,
+              q: i.qty,
+              d: i.deliveryType,
+              ...(photoByLine[idx] ? { p: photoByLine[idx] } : {}),
+            }))
           ),
         },
       },

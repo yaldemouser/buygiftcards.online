@@ -36,7 +36,7 @@ async function fulfillOrder(session: Stripe.Checkout.Session) {
 
   const cartRaw = session.metadata?.cart;
   if (!cartRaw || !session.customer_details?.email) return;
-  const cart = JSON.parse(cartRaw) as Array<{ s: string; a: number; q: number; d: "egift" | "physical" }>;
+  const cart = JSON.parse(cartRaw) as Array<{ s: string; a: number; q: number; d: "egift" | "physical"; p?: string }>;
 
   const address = session.customer_details.address;
   const taxCents = session.total_details?.amount_tax;
@@ -73,6 +73,7 @@ async function fulfillOrder(session: Stripe.Checkout.Session) {
         denomCents: Math.round(line.a * 100),
         quantity: line.q,
         deliveryType: line.d === "egift" ? "EGIFT" : "PHYSICAL",
+        customPhotoUrl: line.p,
       },
     });
 

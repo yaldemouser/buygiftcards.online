@@ -12,12 +12,16 @@ export type Brand = {
   denominations: number[];
   description: string;
   badge?: string;
+  // Lets the customer upload their own photo to appear on the virtual card
+  // face — purely a storefront visual (src/components/ProductDetail.tsx),
+  // not something that goes to the card issuer. See src/lib/photo-upload.ts.
+  supportsCustomPhoto?: boolean;
 };
 
 // Server-side source of truth for prices. Checkout re-validates every line
 // item against this list — the client can never dictate what gets charged.
 export const BRANDS: Brand[] = [
-  { slug: "visa", name: "Visa Virtual Account", category: "Visa", domain: "visa.com", color: "#1a1f71", type: "both", min: 10, max: 250, denominations: [25, 50, 100, 150, 200, 250], badge: "BEST SELLER", description: "Use anywhere Visa debit cards are accepted in the US. Shop online or in stores with the freedom to choose." },
+  { slug: "visa", name: "Visa Virtual Account", category: "Visa", domain: "visa.com", color: "#1a1f71", type: "both", min: 10, max: 250, denominations: [25, 50, 100, 150, 200, 250], badge: "BEST SELLER", description: "Use anywhere Visa debit cards are accepted in the US. Shop online or in stores with the freedom to choose.", supportsCustomPhoto: true },
   { slug: "mastercard", name: "Mastercard Virtual Account", category: "Mastercard", domain: "mastercard.com", color: "#eb001b", type: "both", min: 10, max: 250, denominations: [25, 50, 100, 150, 200, 250], description: "Accepted worldwide wherever Mastercard debit is accepted. A flexible gift for any occasion." },
   { slug: "amazon", name: "Amazon", category: "Shopping", domain: "amazon.com", color: "#ff9900", type: "egift", min: 15, max: 500, denominations: [25, 50, 100, 200, 500], description: "Millions of items to choose from on Amazon.com." },
   { slug: "starbucks", name: "Starbucks", category: "Food & Drink", domain: "starbucks.com", color: "#00704a", type: "both", min: 10, max: 100, denominations: [10, 15, 25, 50, 100], description: "Redeemable at any participating US Starbucks location or via the app." },

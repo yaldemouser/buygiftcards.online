@@ -11,6 +11,7 @@ export type CartItem = {
   amount: number; // dollars
   qty: number;
   deliveryType: "egift" | "physical";
+  customPhotoUrl?: string;
 };
 
 type CartContextValue = {
@@ -47,7 +48,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items, hydrated]);
 
   const add: CartContextValue["add"] = (item) => {
-    const key = `${item.brandSlug}-${item.amount}-${item.deliveryType}`;
+    // Photo included in the key so two different uploaded photos for the
+    // same brand/amount/delivery become separate lines instead of merging.
+    const key = `${item.brandSlug}-${item.amount}-${item.deliveryType}-${item.customPhotoUrl ?? ""}`;
     setItems((prev) => {
       const i = prev.findIndex((x) => x.key === key);
       if (i >= 0) {
