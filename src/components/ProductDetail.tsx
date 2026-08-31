@@ -28,6 +28,7 @@ export function ProductDetail({ brand: b }: { brand: Brand }) {
 
   const amt = isCustom ? Number(custom) || 0 : amount;
   const valid = amt >= b.min && amt <= b.max && !photoUploading;
+  const chargeAmt = b.discountPercent ? Math.round(amt * (1 - b.discountPercent / 100) * 100) / 100 : amt;
 
   const onPhotoSelected = async (file: File | undefined) => {
     if (!file) return;
@@ -104,6 +105,11 @@ export function ProductDetail({ brand: b }: { brand: Brand }) {
             {deliveryType === "egift" ? "eGIFT CARD" : "GIFT CARD"}
           </div>
           {amt > 0 && <div className="absolute bottom-4 left-5 text-2xl font-extrabold text-white drop-shadow">{fmt(amt)}</div>}
+          {!!b.discountPercent && (
+            <span className="absolute top-4 right-5 bg-accent-500 text-ink-950 text-[11px] font-extrabold px-2.5 py-1 rounded-full shadow-md">
+              {b.discountPercent}% OFF
+            </span>
+          )}
         </div>
       </div>
 
@@ -180,7 +186,14 @@ export function ProductDetail({ brand: b }: { brand: Brand }) {
         )}
 
         <div className="mb-7">
-          <div className="text-sm font-bold mb-3">Select Amount</div>
+          <div className="text-sm font-bold mb-3 flex items-center gap-2">
+            Select Amount
+            {!!b.discountPercent && (
+              <span className="bg-accent-500 text-ink-950 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                {b.discountPercent}% OFF
+              </span>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2.5">
             {b.denominations.map((v) => (
               <button
@@ -190,11 +203,18 @@ export function ProductDetail({ brand: b }: { brand: Brand }) {
                   setIsCustom(false);
                   setAdded(false);
                 }}
-                className={`px-6 py-3 rounded-xl border-2 font-extrabold ${
+                className={`px-6 py-3 rounded-xl border-2 font-extrabold flex flex-col items-center ${
                   !isCustom && amount === v ? "border-brand-600 bg-brand-50 text-brand-600" : "border-ink-100"
                 }`}
               >
-                {fmt(v)}
+                {b.discountPercent ? (
+                  <>
+                    <span className="text-[11px] font-semibold line-through opacity-50 leading-none">{fmt(v)}</span>
+                    <span className="leading-tight">{fmt(Math.round(v * (1 - b.discountPercent / 100) * 100) / 100)}</span>
+                  </>
+                ) : (
+                  fmt(v)
+                )}
               </button>
             ))}
             <button
@@ -230,7 +250,19 @@ export function ProductDetail({ brand: b }: { brand: Brand }) {
         <div className="flex items-center gap-6 pt-6 border-t border-ink-100">
           <div>
             <div className="text-xs text-ink-400">Total</div>
-            <div className="text-3xl font-extrabold">{fmt(amt * qty)}</div>
+            {b.discountPercent ? (
+              <div className="flex items-baseline gap-2">
+                <div className="text-3xl font-extrabold">{fmt(chargeAmt * qty)}</div>
+                <div className="text-sm font-semibold text-ink-400 line-through">{fmt(amt * qty)}</div>
+              </div>
+            ) : (
+              <div className="text-3xl font-extrabold">{fmt(amt * qty)}</div>
+            )}
+            <div className="text-[11px] text-ink-400 mt-0.5">
+              {b.discountPercent
+                ? `Gift card value: ${fmt(amt * qty)} — you pay ${b.discountPercent}% less`
+                : "Gift card value: full amount, no fees"}
+            </div>
           </div>
           <button
             disabled={!valid}

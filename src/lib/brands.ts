@@ -16,6 +16,11 @@ export type Brand = {
   // face — purely a storefront visual (src/components/ProductDetail.tsx),
   // not something that goes to the card issuer. See src/lib/photo-upload.ts.
   supportsCustomPhoto?: boolean;
+  // Percent off face value — a real reseller-style discount (customer pays
+  // less than the card's value), not just a cosmetic badge. Applied to the
+  // charged amount in the checkout route; the gift card is still issued at
+  // full face value.
+  discountPercent?: number;
 };
 
 // Server-side source of truth for prices. Checkout re-validates every line
@@ -24,7 +29,7 @@ export const BRANDS: Brand[] = [
   { slug: "visa", name: "Visa Virtual Account", category: "Visa", domain: "visa.com", color: "#1a1f71", type: "both", min: 10, max: 250, denominations: [25, 50, 100, 150, 200, 250], badge: "BEST SELLER", description: "Use anywhere Visa debit cards are accepted in the US. Shop online or in stores with the freedom to choose.", supportsCustomPhoto: true },
   { slug: "mastercard", name: "Mastercard Virtual Account", category: "Mastercard", domain: "mastercard.com", color: "#eb001b", type: "both", min: 10, max: 250, denominations: [25, 50, 100, 150, 200, 250], description: "Accepted worldwide wherever Mastercard debit is accepted. A flexible gift for any occasion." },
   { slug: "amazon", name: "Amazon", category: "Shopping", domain: "amazon.com", color: "#ff9900", type: "egift", min: 15, max: 500, denominations: [25, 50, 100, 200, 500], description: "Millions of items to choose from on Amazon.com." },
-  { slug: "starbucks", name: "Starbucks", category: "Food & Drink", domain: "starbucks.com", color: "#00704a", type: "both", min: 10, max: 100, denominations: [10, 15, 25, 50, 100], description: "Redeemable at any participating US Starbucks location or via the app." },
+  { slug: "starbucks", name: "Starbucks", category: "Food & Drink", domain: "starbucks.com", color: "#00704a", type: "both", min: 10, max: 100, denominations: [10, 15, 25, 50, 100], description: "Redeemable at any participating US Starbucks location or via the app.", discountPercent: 5 },
   { slug: "apple", name: "Apple", category: "Tech", domain: "apple.com", color: "#333333", type: "egift", min: 25, max: 500, denominations: [25, 50, 100, 200], description: "App Store, Apple Music, iCloud+, Apple TV+, accessories, and more." },
   { slug: "doordash", name: "DoorDash", category: "Food & Drink", domain: "doordash.com", color: "#ff3008", type: "egift", min: 15, max: 500, denominations: [20, 50, 100], description: "Restaurants and more, delivered to their door." },
   { slug: "nike", name: "Nike", category: "Fashion", domain: "nike.com", color: "#111111", type: "both", min: 25, max: 250, denominations: [25, 50, 100, 150, 250], description: "Redeemable at Nike stores, Nike.com, and the Nike app." },
@@ -220,4 +225,17 @@ export function isValidDenomination(brand: Brand, amountCents: number): boolean 
   const dollars = amountCents / 100;
   if (brand.denominations.includes(dollars)) return true;
   return dollars >= brand.min && dollars <= brand.max && Number.isInteger(dollars);
+}
+
+/**
+ * What the customer actually pays for a given face-value denomination, in
+ * cents, after any discount. The gift card is still issued at the full
+ * face value — the discount is the reseller's margin, same model real
+ * gift-card marketplaces use. Server-side source of truth; the checkout
+ * route recomputes this itself rather than trusting a client-sent price.
+ */
+export function chargeAmountCents(brand: Brand, faceValueDollars: number): number {
+  const faceCents = Math.round(faceValueDollars * 100);
+  if (!brand.discountPercent) return faceCents;
+  return Math.round(faceCents * (1 - brand.discountPercent / 100));
 }

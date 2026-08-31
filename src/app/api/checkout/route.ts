@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { stripe } from "@/lib/stripe";
-import { getBrand, isValidDenomination } from "@/lib/brands";
+import { getBrand, isValidDenomination, chargeAmountCents } from "@/lib/brands";
 
 const CartItemSchema = z.object({
   brandSlug: z.string(),
@@ -50,6 +50,11 @@ export async function POST(req: NextRequest) {
       if (!isValidDenomination(brand, amountCents)) {
         return NextResponse.json({ error: `Invalid amount for ${brand.name}` }, { status: 400 });
       }
+      // What we actually charge can be less than face value (e.g. Starbucks'
+      // 5% discount) — the customer still receives a gift card worth the
+      // full face amount; we just collect less for it. Face value (item.amount)
+      // is what gets recorded/issued, computed below and carried in metadata.
+      const chargeCents = chargeAmountCents(brand, item.amount);
       // Only trust a custom photo for brands that actually support it, and
       // only if it's really hosted on our own Blob storage — never pass an
       // arbitrary client-supplied URL through to Stripe/our DB unchecked.
@@ -68,11 +73,13 @@ export async function POST(req: NextRequest) {
         price_data: {
           currency: "usd",
           product_data: {
-            name: `${brand.name} ${item.deliveryType === "egift" ? "eGift" : "Physical"} Card — $${item.amount}`,
+            name: `${brand.name} ${item.deliveryType === "egift" ? "eGift" : "Physical"} Card — $${item.amount}${
+              brand.discountPercent ? ` (${brand.discountPercent}% off)` : ""
+            }`,
             images: customPhotoUrl ? [customPhotoUrl] : undefined,
             metadata: { brandSlug: brand.slug, amount: String(item.amount), deliveryType: item.deliveryType },
           },
-          unit_amount: amountCents,
+          unit_amount: chargeCents,
         },
         quantity: item.qty,
       });
