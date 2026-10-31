@@ -10,6 +10,7 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { NewsletterModal } from "@/components/NewsletterModal";
 import { AuthModal } from "@/components/AuthModal";
 import { SessionProviderWrapper } from "@/components/SessionProviderWrapper";
+import { Analytics } from '@vercel/analytics/next';
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </AuthModalProvider>
           </CartProvider>
         </SessionProviderWrapper>
+        <Analytics />
       </body>
     </html>
   );
